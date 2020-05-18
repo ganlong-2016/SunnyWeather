@@ -11,9 +11,11 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.sunnyweather.android.MainActivity
 import com.sunnyweather.android.R
 import com.sunnyweather.android.logic.model.Place
 import com.sunnyweather.android.ui.weather.WeatherActivity
+import kotlinx.android.synthetic.main.activity_weather.*
 import kotlinx.android.synthetic.main.fragment_place.*
 
 /**
@@ -39,9 +41,9 @@ class PlaceFragment : Fragment() {
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        if (viewModel.isPlaceSaved()){
+        if (activity is MainActivity && viewModel.isPlaceSaved()) {
             val place = viewModel.getSavedPlace()
-            val intent = Intent(activity,WeatherActivity::class.java).apply {
+            val intent = Intent(activity, WeatherActivity::class.java).apply {
                 putExtra("location_lng", place.location.lng)
                 putExtra("location_lat", place.location.lat)
                 putExtra("place_name", place.name)
@@ -55,14 +57,23 @@ class PlaceFragment : Fragment() {
         adapter = PlaceAdapter(viewModel.placeList)
         adapter.setOnItemClickListener { adapter, view, position ->
             val place = adapter.data[position] as Place
-            val intent = Intent(activity, WeatherActivity::class.java).apply {
-                putExtra("location_lng", place.location.lng)
-                putExtra("location_lat", place.location.lat)
-                putExtra("place_name", place.name)
+            if (activity is WeatherActivity) {
+                (activity as WeatherActivity).drawerLayout.closeDrawers()
+                (activity as WeatherActivity).viewModel.locationLng = place.location.lng
+                (activity as WeatherActivity).viewModel.locationLat = place.location.lat
+                (activity as WeatherActivity).viewModel.placeName = place.name
+                (activity as WeatherActivity).refreshWeather()
+
+            } else {
+                val intent = Intent(activity, WeatherActivity::class.java).apply {
+                    putExtra("location_lng", place.location.lng)
+                    putExtra("location_lat", place.location.lat)
+                    putExtra("place_name", place.name)
+                }
+                viewModel.savePlace(place)
+                startActivity(intent)
+                activity?.finish()
             }
-            viewModel.savePlace(place)
-            startActivity(intent)
-            activity?.finish()
         }
         recyclerView.adapter = adapter
         searchPlaceEdit.addTextChangedListener {
